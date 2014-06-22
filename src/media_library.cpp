@@ -930,48 +930,44 @@ void MediaLibrary::LocateSong(const MPD::Song &s)
 		Tags.showAll();
 		if (Tags.empty())
 			update();
-		if (primary_tag != Tags.current().value().tag())
+
+		if (!MoveToTag(primary_tag, false))
 		{
-			for (size_t i = 0; i < Tags.size(); ++i)
-			{
-				if (primary_tag == Tags[i].value().tag())
-				{
-					Tags.highlight(i);
-					Albums.clear();
-					Songs.clear();
-					break;
-				}
-			}
+			withUnfilteredMenuReapplyFilter(Tags, [this, &primary_tag, &s]() {
+				auto &&tag = PrimaryTag(primary_tag, s.getMTime());
+				Tags.addItem(tag);
+				std::sort(Tags.beginV(), Tags.endV(), SortPrimaryTags());
+			});
+			Tags.refresh();
+			MoveToTag(primary_tag, true);
 		}
 	}
 	
 	Albums.showAll();
 	if (Albums.empty())
 		update();
-	
-	std::string album = s.getAlbum();
-	std::string date = s.getDate();
-	if ((hasTwoColumns && Albums.current().value().entry().tag() != primary_tag)
-	||  album != Albums.current().value().entry().album()
-	||  date != Albums.current().value().entry().date())
+
+	if (Albums.empty())
+		return;
+
+	if (!MoveToAlbum(primary_tag, s, false) && hasTwoColumns)
 	{
-		for (size_t i = 0; i < Albums.size(); ++i)
-		{
-			if ((!hasTwoColumns || Albums[i].value().entry().tag() == primary_tag)
-			&&   album == Albums[i].value().entry().album()
-			&&   date == Albums[i].value().entry().date())
-			{
-				Albums.highlight(i);
-				Songs.clear();
-				break;
-			}
-		}
+		withUnfilteredMenuReapplyFilter(Albums, [this, &primary_tag, &s]() {
+			auto &&entry = AlbumEntry(Album(primary_tag, s.getAlbum(), s.getDate(), s.getMTime()));
+			Albums.addItem(entry);
+			std::sort(Albums.beginV(), Albums.endV(), SortAlbumEntries());
+		});
+		Albums.refresh();
+		MoveToAlbum(primary_tag, s, true);
 	}
 	
 	Songs.showAll();
 	if (Songs.empty())
 		update();
-	
+
+	if (Songs.empty())
+		return;
+
 	if (s.getHash() != Songs.current().value().getHash())
 	{
 		for (size_t i = 0; i < Songs.size(); ++i)
@@ -1034,6 +1030,63 @@ void MediaLibrary::AddToPlaylist(bool add_n_play)
 		else if (isActiveWindow(Albums))
 			Songs.clear();
 	}
+}
+
+bool MediaLibrary::MoveToTag(const std::string primary_tag, bool tags_changed)
+{
+	if (primary_tag == Tags.current().value().tag())
+	{
+		if (tags_changed)
+		{
+			Albums.clear();
+			Songs.clear();
+		}
+		return true;
+	}
+
+	for (size_t i = 0; i < Tags.size(); ++i)
+	{
+		if (primary_tag == Tags[i].value().tag())
+		{
+			Tags.highlight(i);
+			Albums.clear();
+			Songs.clear();
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool MediaLibrary::MoveToAlbum(const std::string primary_tag, const MPD::Song &s, bool albums_changed)
+{
+	std::string album = s.getAlbum();
+	std::string date = s.getDate();
+	if ((!hasTwoColumns || Albums.current().value().entry().tag() == primary_tag)
+	&&   album == Albums.current().value().entry().album()
+	&&   date == Albums.current().value().entry().date())
+	{
+		if (albums_changed)
+		{
+			Songs.clear();
+		}
+		return true;
+	}
+
+	for (size_t i = 0; i < Albums.size(); ++i)
+	{
+		if ((!hasTwoColumns || Albums[i].value().entry().tag() == primary_tag)
+		&&   album == Albums[i].value().entry().album()
+		&&   date == Albums[i].value().entry().date())
+		{
+			Albums.highlight(i);
+			Songs.clear();
+			return true;
+			break;
+		}
+	}
+
+	return false;
 }
 
 namespace {//

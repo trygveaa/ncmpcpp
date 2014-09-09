@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -432,6 +432,14 @@ template <typename CharT>
 void stringToBuffer(const std::basic_string<CharT> &s, NC::BasicBuffer<CharT> &buf)
 {
 	stringToBuffer(s.begin(), s.end(), buf);
+}
+
+template <typename CharT>
+NC::BasicBuffer<CharT> stringToBuffer(const std::basic_string<CharT> &s)
+{
+	NC::BasicBuffer<CharT> result;
+	stringToBuffer(s, result);
+	return result;
 }
 
 template <typename T> void ShowTime(T &buf, size_t length, bool short_names)

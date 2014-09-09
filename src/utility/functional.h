@@ -18,66 +18,20 @@
  *   51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.              *
  ***************************************************************************/
 
-#ifndef NCMPCPP_MACRO_UTILITIES_H
-#define NCMPCPP_MACRO_UTILITIES_H
+#ifndef NCMPCPP_UTILITY_FUNCTIONAL_H
+#define NCMPCPP_UTILITY_FUNCTIONAL_H
 
-#include <cassert>
-#include "actions.h"
-#include "screen_type.h"
+#include <utility>
 
-namespace Actions {//
-
-struct PushCharacters : public BaseAction
+// identity function object
+struct id_
 {
-	PushCharacters(NC::Window **w, std::vector<int> &&queue)
-	: BaseAction(Type::MacroUtility, ""), m_window(w), m_queue(queue) { }
-	
-protected:
-	virtual void run();
-	
-private:
-	NC::Window **m_window;
-	std::vector<int> m_queue;
+	template <typename ValueT>
+	constexpr auto operator()(ValueT &&v) const noexcept
+		-> decltype(std::forward<ValueT>(v))
+	{
+		return std::forward<ValueT>(v);
+	}
 };
 
-struct RequireRunnable : public BaseAction
-{
-	RequireRunnable(BaseAction *action)
-	: BaseAction(Type::MacroUtility, ""), m_action(action) { assert(action); }
-	
-protected:
-	virtual bool canBeRun() const;
-	virtual void run() { }
-	
-private:
-	BaseAction *m_action;
-};
-
-struct RequireScreen : public BaseAction
-{
-	RequireScreen(ScreenType screen_type)
-	: BaseAction(Type::MacroUtility, ""), m_screen_type(screen_type) { }
-	
-protected:
-	virtual bool canBeRun() const;
-	virtual void run() { }
-	
-private:
-	ScreenType m_screen_type;
-};
-
-struct RunExternalCommand : public BaseAction
-{
-	RunExternalCommand(std::string command)
-	: BaseAction(Type::MacroUtility, ""), m_command(command) { }
-	
-protected:
-	virtual void run();
-	
-private:
-	std::string m_command;
-};
-
-}
-
-#endif // NCMPCPP_MACRO_UTILITIES_H
+#endif // NCMPCPP_UTILITY_FUNCTIONAL_H

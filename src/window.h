@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -80,6 +80,7 @@
 #define KEY_F12 276
 
 // other handy keys
+#define KEY_ESCAPE 27
 #define KEY_SHIFT_TAB 353
 #define KEY_SPACE 32
 #define KEY_TAB 9
@@ -89,7 +90,7 @@
 
 // KEY_ENTER is 343, which doesn't make any sense. This makes it useful.
 #undef KEY_ENTER
-#define KEY_ENTER 10
+#define KEY_ENTER 13
 
 // undefine scroll macro as it collides with Window::scroll
 #undef scroll
@@ -114,6 +115,9 @@ namespace NC {//
 /// Colors used by NCurses
 enum class Color { Default, Black, Red, Green, Yellow, Blue, Magenta, Cyan, White, End };
 
+std::ostream &operator<<(std::ostream &os, Color c);
+std::istream &operator>>(std::istream &is, Color &c);
+
 /// Format flags used by NCurses
 enum class Format {
 	None,
@@ -123,11 +127,18 @@ enum class Format {
 	AltCharset, NoAltCharset
 };
 
+std::ostream &operator<<(std::ostream &os, Format f);
+
 /// Available border colors for window
 enum class Border { None, Black, Red, Green, Yellow, Blue, Magenta, Cyan, White };
 
+std::ostream &operator<<(std::ostream &os, Border b);
+std::istream &operator>>(std::istream &is, Border &b);
+
 /// This indicates how much the window has to be scrolled
 enum class Scroll { Up, Down, PageUp, PageDown, Home, End };
+
+std::ostream &operator<<(std::ostream &os, Scroll s);
 
 /// Helper function that is invoked each time one will want
 /// to obtain string from Window::getString() function
@@ -265,8 +276,8 @@ struct Window
 	/// Run current GetString helper function (if defined).
 	/// @see getString()
 	/// @return true if helper was run, false otherwise
-	bool runGetStringHelper(const char *arg) const;
-	
+	bool runGetStringHelper(const char *arg, bool *done) const;
+
 	/// Sets window's base color
 	/// @param fg foregound base color
 	/// @param bg background base color

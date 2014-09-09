@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -21,6 +21,8 @@
 #ifndef NCMPCPP_PLAYLIST_EDITOR_H
 #define NCMPCPP_PLAYLIST_EDITOR_H
 
+#include <boost/date_time/posix_time/posix_time_types.hpp>
+
 #include "interfaces.h"
 #include "screen.h"
 
@@ -37,6 +39,8 @@ struct PlaylistEditor: Screen<NC::Window *>, Filterable, HasColumns, HasSongs, S
 	virtual void refresh() OVERRIDE;
 	virtual void update() OVERRIDE;
 	
+	virtual int windowTimeout() OVERRIDE;
+
 	virtual void enterPressed() OVERRIDE;
 	virtual void spacePressed() OVERRIDE;
 	virtual void mouseButtonPressed(MEVENT me) OVERRIDE;
@@ -69,6 +73,8 @@ struct PlaylistEditor: Screen<NC::Window *>, Filterable, HasColumns, HasSongs, S
 	virtual void nextColumn() OVERRIDE;
 	
 	// private members
+	void updateTimer();
+
 	void requestPlaylistsUpdate() { m_playlists_update_requested = true; }
 	void requestContentsUpdate() { m_content_update_requested = true; }
 	
@@ -87,6 +93,8 @@ private:
 	
 	bool m_playlists_update_requested;
 	bool m_content_update_requested;
+
+	boost::posix_time::ptime m_timer;
 };
 
 extern PlaylistEditor *myPlaylistEditor;

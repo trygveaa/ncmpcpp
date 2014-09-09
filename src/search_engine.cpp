@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -119,7 +119,17 @@ void SearchEngine::resize()
 	getWindowResizeParams(x_offset, width);
 	w.resize(width, MainHeight);
 	w.moveTo(x_offset, MainStartY);
-	w.setTitle(Config.columns_in_search_engine && Config.titles_visibility ? Display::Columns(w.getWidth()) : "");
+	switch (Config.search_engine_display_mode)
+	{
+		case DisplayMode::Columns:
+			if (Config.titles_visibility)
+			{
+				w.setTitle(Display::Columns(w.getWidth()));
+				break;
+			}
+		case DisplayMode::Classic:
+			w.setTitle("");
+	}
 	hasToBeResized = 0;
 }
 
@@ -169,13 +179,13 @@ void SearchEngine::enterPressed()
 	else if (option == SearchButton)
 	{
 		w.showAll();
-		Statusbar::msg("Searching...");
+		Statusbar::print("Searching...");
 		if (w.size() > StaticOptions)
 			Prepare();
 		Search();
 		if (w.back().value().isSong())
 		{
-			if (Config.columns_in_search_engine)
+			if (Config.search_engine_display_mode == DisplayMode::Columns)
 				w.setTitle(Config.titles_visibility ? Display::Columns(w.getWidth()) : "");
 			size_t found = w.size()-SearchEngine::StaticOptions;
 			found += 3; // don't count options inserted below
@@ -184,7 +194,7 @@ void SearchEngine::enterPressed()
 			w.at(ResetButton+2).value().mkBuffer() << Config.color1 << "Search results: " << Config.color2 << "Found " << found << (found > 1 ? " songs" : " song") << NC::Color::Default;
 			w.insertSeparator(ResetButton+3);
 			markSongsInPlaylist(proxySongList());
-			Statusbar::msg("Searching finished");
+			Statusbar::print("Searching finished");
 			if (Config.block_search_constraints_change)
 				for (size_t i = 0; i < StaticOptions-4; ++i)
 					w.at(i).setInactive(true);
@@ -192,7 +202,7 @@ void SearchEngine::enterPressed()
 			w.scroll(NC::Scroll::Down);
 		}
 		else
-			Statusbar::msg("No results found");
+			Statusbar::print("No results found");
 	}
 	else if (option == ResetButton)
 	{
@@ -391,7 +401,7 @@ void SearchEngine::reset()
 		itsConstraints[i].clear();
 	w.reset();
 	Prepare();
-	Statusbar::msg("Search state reset");
+	Statusbar::print("Search state reset");
 }
 
 void SearchEngine::Search()
@@ -616,10 +626,15 @@ std::string SEItemToString(const SEItem &ei)
 	std::string result;
 	if (ei.isSong())
 	{
-		if (Config.columns_in_search_engine)
-			result = ei.song().toString(Config.song_in_columns_to_string_format, Config.tags_separator);
-		else
-			result = ei.song().toString(Config.song_list_format_dollar_free, Config.tags_separator);
+		switch (Config.search_engine_display_mode)
+		{
+			case DisplayMode::Classic:
+				result = ei.song().toString(Config.song_list_format_dollar_free, Config.tags_separator);
+				break;
+			case DisplayMode::Columns:
+				result = ei.song().toString(Config.song_in_columns_to_string_format, Config.tags_separator);
+				break;
+		}
 	}
 	else
 		result = ei.buffer().str();

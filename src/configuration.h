@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -18,28 +18,11 @@
  *   51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.              *
  ***************************************************************************/
 
-#ifndef NCMPCPP_EXEC_ITEM_H
-#define NCMPCPP_EXEC_ITEM_H
+#ifndef NCMPCPP_CONFIGURATION_H
+#define NCMPCPP_CONFIGURATION_H
 
-#include <functional>
+void expand_home(std::string &path);
 
-template <typename ItemT, typename FunType> struct ExecItem
-{
-	typedef ItemT Item;
-	typedef std::function<FunType> Function;
-	
-	ExecItem() { }
-	ExecItem(const Item &item_, Function f) : m_item(item_), m_exec(f) { }
-	
-	Function &exec() { return m_exec; }
-	const Function &exec() const { return m_exec; }
-	
-	Item &item() { return m_item; }
-	const Item &item() const { return m_item; }
-	
-private:
-	Item m_item;
-	Function m_exec;
-};
+bool configure(int argc, char **argv);
 
-#endif // NCMPCPP_EXEC_ITEM_H
+#endif // NCMPCPP_CONFIGURATION_H

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -73,7 +73,7 @@ void TinyTagEditor::switchTo()
 	using Global::myScreen;
 	if (itsEdited.isStream())
 	{
-		Statusbar::msg("Streams can't be edited");
+		Statusbar::print("Streams can't be edited");
 	}
 	else if (getTags())
 	{
@@ -88,8 +88,8 @@ void TinyTagEditor::switchTo()
 			full_path += Config.mpd_music_dir;
 		full_path += itsEdited.getURI();
 		
-		const char msg[] = "Couldn't read file \"%ls\"";
-		Statusbar::msg(msg, wideShorten(ToWString(full_path), COLS-const_strlen(msg)).c_str());
+		const char msg[] = "Couldn't read file \"%1%\"";
+		Statusbar::printf(msg, wideShorten(full_path, COLS-const_strlen(msg)));
 	}
 }
 
@@ -115,23 +115,26 @@ void TinyTagEditor::enterPressed()
 	else if (option == 20)
 	{
 		Statusbar::put() << NC::Format::Bold << "Filename: " << NC::Format::NoBold;
-		std::string filename = itsEdited.getNewURI().empty() ? itsEdited.getName() : itsEdited.getNewURI();
+		std::string filename = itsEdited.getNewName().empty() ? itsEdited.getName() : itsEdited.getNewName();
 		size_t dot = filename.rfind(".");
 		std::string extension = filename.substr(dot);
 		filename = filename.substr(0, dot);
 		std::string new_name = Global::wFooter->getString(filename);
-		itsEdited.setNewURI(new_name + extension);
-		w.at(option).value().clear();
-		w.at(option).value() << NC::Format::Bold << "Filename:" << NC::Format::NoBold << ' ' << (itsEdited.getNewURI().empty() ? itsEdited.getName() : itsEdited.getNewURI());
+		if (!new_name.empty())
+		{
+			itsEdited.setNewName(new_name + extension);
+			w.at(option).value().clear();
+			w.at(option).value() << NC::Format::Bold << "Filename:" << NC::Format::NoBold << ' ' << (itsEdited.getNewName().empty() ? itsEdited.getName() : itsEdited.getNewName());
+		}
 	}
 	Statusbar::unlock();
 	
 	if (option == 22)
 	{
-		Statusbar::msg("Updating tags...");
+		Statusbar::print("Updating tags...");
 		if (Tags::write(itsEdited))
 		{
-			Statusbar::msg("Tags updated");
+			Statusbar::print("Tags updated");
 			if (itsEdited.isFromDatabase())
 				Mpd.UpdateDirectory(itsEdited.getDirectory());
 			else
@@ -143,7 +146,7 @@ void TinyTagEditor::enterPressed()
 			}
 		}
 		else
-			Statusbar::msg("Error while writing tags");
+			Statusbar::print("Error while writing tags");
 	}
 	if (option > 21)
 		m_previous_screen->switchTo();

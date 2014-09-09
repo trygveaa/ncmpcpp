@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -110,7 +110,7 @@ std::wstring SortPlaylistDialog::title()
 
 void SortPlaylistDialog::enterPressed()
 {
-	w.current().value().exec()();
+	w.current().value().run();
 }
 
 void SortPlaylistDialog::mouseButtonPressed(MEVENT me)
@@ -150,7 +150,7 @@ void SortPlaylistDialog::moveSortOrderUp()
 
 void SortPlaylistDialog::moveSortOrderHint() const
 {
-	Statusbar::msg("Move tag types up and down to adjust sort order");
+	Statusbar::print("Move tag types up and down to adjust sort order");
 }
 
 void SortPlaylistDialog::sort() const
@@ -200,11 +200,11 @@ void SortPlaylistDialog::sort() const
 		}
 	};
 	
-	Statusbar::msg("Sorting...");
+	Statusbar::print("Sorting...");
 	Mpd.StartCommandsList();
 	quick_sort(playlist.begin(), playlist.end());
 	Mpd.CommitCommandsList();
-	Statusbar::msg("Playlist sorted");
+	Statusbar::print("Playlist sorted");
 	switchToPreviousScreen();
 }
 

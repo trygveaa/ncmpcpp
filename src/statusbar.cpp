@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -30,31 +30,12 @@ using Global::wFooter;
 
 namespace {//
 
-timeval statusbarLockTime;
-int statusbarLockDelay = -1;
+boost::posix_time::ptime statusbarLockTime;
+boost::posix_time::seconds statusbarLockDelay(-1);
 
 bool statusbarBlockUpdate = false;
 bool progressbarBlockUpdate = false;
 bool statusbarAllowUnlock = true;
-
-void showMessage(int time, const char *format, va_list list)
-{
-	if (statusbarAllowUnlock)
-	{
-		statusbarLockTime = Global::Timer;
-		statusbarLockDelay = time;
-		if (Config.statusbar_visibility)
-			statusbarBlockUpdate = true;
-		else
-			progressbarBlockUpdate = true;
-		wFooter->goToXY(0, Config.statusbar_visibility);
-		*wFooter << NC::Format::NoBold;
-		wmove(wFooter->raw(), Config.statusbar_visibility, 0);
-		vw_printw(wFooter->raw(), format, list);
-		wclrtoeol(wFooter->raw());
-		wFooter->refresh();
-	}
-}
 
 }
 
@@ -116,19 +97,24 @@ void Statusbar::lock()
 void Statusbar::unlock()
 {
 	statusbarAllowUnlock = true;
-	if (statusbarLockDelay < 0)
+	if (statusbarLockDelay.is_negative())
 	{
 		if (Config.statusbar_visibility)
 			statusbarBlockUpdate = false;
 		else
 			progressbarBlockUpdate = false;
 	}
-	if (Status::State::player() == MPD::psStop)
+	if (Status::get().playerState() == MPD::psStop)
 	{
-		if (Config.new_design)
-			Progressbar::draw(Status::State::elapsedTime(), myPlaylist->currentSongLength());
-		else
-			put() << wclrtoeol;
+		switch (Config.design)
+		{
+			case Design::Classic:
+				put() << wclrtoeol;
+				break;
+			case Design::Alternative:
+				Progressbar::draw(Status::elapsedTime(), Status::get().totalTime());
+				break;
+		}
 		wFooter->refresh();
 	}
 }
@@ -141,22 +127,27 @@ bool Statusbar::isUnlocked()
 void Statusbar::tryRedraw()
 {
 	using Global::Timer;
-	if (statusbarLockDelay > 0
-	&&  Timer.tv_sec >= statusbarLockTime.tv_sec+statusbarLockDelay)
+	if (statusbarLockDelay > boost::posix_time::seconds(0)
+	&&  Timer - statusbarLockTime > statusbarLockDelay)
 	{
-		statusbarLockDelay = -1;
+		statusbarLockDelay = boost::posix_time::seconds(-1);
 		
 		if (Config.statusbar_visibility)
 			statusbarBlockUpdate = !statusbarAllowUnlock;
 		else
 			progressbarBlockUpdate = !statusbarAllowUnlock;
 		
-		if (Status::State::player() != MPD::psStop && !statusbarBlockUpdate && !progressbarBlockUpdate)
+		if (Status::get().playerState() != MPD::psStop && !statusbarBlockUpdate && !progressbarBlockUpdate)
 		{
-			if (Config.new_design)
-				Progressbar::draw(Status::State::elapsedTime(), myPlaylist->currentSongLength());
-			else
-				Status::Changes::elapsedTime(false);
+			switch (Config.design)
+			{
+				case Design::Classic:
+					Status::Changes::elapsedTime(false);
+					break;
+				case Design::Alternative:
+					Progressbar::draw(Status::elapsedTime(), Status::get().totalTime());
+					break;
+			}
 			wFooter->refresh();
 		}
 	}
@@ -168,20 +159,20 @@ NC::Window &Statusbar::put()
 	return *wFooter;
 }
 
-void Statusbar::msg(const char *format, ...)
+void Statusbar::print(int delay, const std::string &message)
 {
-	va_list list;
-	va_start(list, format);
-	showMessage(Config.message_delay_time, format, list);
-	va_end(list);
-}
-
-void Statusbar::msg(int time, const char *format, ...)
-{
-	va_list list;
-	va_start(list, format);
-	showMessage(time, format, list);
-	va_end(list);
+	if (statusbarAllowUnlock)
+	{
+		statusbarLockTime = Global::Timer;
+		statusbarLockDelay = boost::posix_time::seconds(delay);
+		if (Config.statusbar_visibility)
+			statusbarBlockUpdate = true;
+		else
+			progressbarBlockUpdate = true;
+		wFooter->goToXY(0, Config.statusbar_visibility);
+		*wFooter << message << wclrtoeol;
+		wFooter->refresh();
+	}
 }
 
 void Statusbar::Helpers::mpd()

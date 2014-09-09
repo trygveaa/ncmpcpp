@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -21,6 +21,8 @@
 #ifndef NCMPCPP_MEDIA_LIBRARY_H
 #define NCMPCPP_MEDIA_LIBRARY_H
 
+#include <boost/date_time/posix_time/posix_time_types.hpp>
+
 #include "interfaces.h"
 #include "screen.h"
 
@@ -37,6 +39,8 @@ struct MediaLibrary: Screen<NC::Window *>, Filterable, HasColumns, HasSongs, Sea
 	virtual void refresh() OVERRIDE;
 	virtual void update() OVERRIDE;
 	
+	virtual int windowTimeout() OVERRIDE;
+
 	virtual void enterPressed() OVERRIDE;
 	virtual void spacePressed() OVERRIDE;
 	virtual void mouseButtonPressed(MEVENT me) OVERRIDE;
@@ -69,6 +73,7 @@ struct MediaLibrary: Screen<NC::Window *>, Filterable, HasColumns, HasSongs, Sea
 	virtual void nextColumn() OVERRIDE;
 	
 	// private members
+	void updateTimer();
 	void toggleColumnsMode();
 	int Columns();
 	void LocateSong(const MPD::Song &);
@@ -145,6 +150,8 @@ private:
 	bool m_tags_update_request;
 	bool m_albums_update_request;
 	bool m_songs_update_request;
+
+	boost::posix_time::ptime m_timer;
 };
 
 extern MediaLibrary *myLibrary;

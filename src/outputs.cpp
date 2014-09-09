@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -73,12 +73,12 @@ void Outputs::enterPressed()
 	if (w.current().value().isEnabled())
 	{
 		Mpd.DisableOutput(w.choice());
-		Statusbar::msg("Output \"%s\" disabled", w.current().value().name().c_str());
+		Statusbar::printf("Output \"%s\" disabled", w.current().value().name());
 	}
 	else
 	{
 		Mpd.EnableOutput(w.choice());
-		Statusbar::msg("Output \"%s\" enabled", w.current().value().name().c_str());
+		Statusbar::printf("Output \"%s\" enabled", w.current().value().name());
 	}
 }
 

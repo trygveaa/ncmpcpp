@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <boost/bind.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <cassert>
 
 #include "charset.h"
@@ -42,7 +43,10 @@ using Global::MainStartY;
 
 PlaylistEditor *myPlaylistEditor;
 
-namespace {//
+namespace {
+
+const int pe_timeout = 250;
+const auto fetch_delay = boost::posix_time::milliseconds(pe_timeout);
 
 size_t LeftColumnStartX;
 size_t LeftColumnWidth;
@@ -56,6 +60,7 @@ bool SongEntryMatcher(const boost::regex &rx, const MPD::Song &s);
 }
 
 PlaylistEditor::PlaylistEditor()
+: m_timer(boost::posix_time::from_time_t(0))
 {
 	LeftColumnWidth = COLS/3-1;
 	RightColumnStartX = LeftColumnWidth+1;
@@ -77,10 +82,15 @@ PlaylistEditor::PlaylistEditor()
 	Content.centeredCursor(Config.centered_cursor);
 	Content.setSelectedPrefix(Config.selected_item_prefix);
 	Content.setSelectedSuffix(Config.selected_item_suffix);
-	if (Config.columns_in_playlist_editor)
-		Content.setItemDisplayer(boost::bind(Display::SongsInColumns, _1, contentProxyList()));
-	else
-		Content.setItemDisplayer(boost::bind(Display::Songs, _1, contentProxyList(), Config.song_list_format));
+	switch (Config.playlist_editor_display_mode)
+	{
+		case DisplayMode::Classic:
+			Content.setItemDisplayer(boost::bind(Display::Songs, _1, contentProxyList(), Config.song_list_format));
+			break;
+		case DisplayMode::Columns:
+			Content.setItemDisplayer(boost::bind(Display::SongsInColumns, _1, contentProxyList()));
+			break;
+	}
 	
 	w = &Playlists;
 }
@@ -112,7 +122,7 @@ std::wstring PlaylistEditor::title()
 void PlaylistEditor::refresh()
 {
 	Playlists.display();
-	mvvline(MainStartY, RightColumnStartX-1, 0, MainHeight);
+	drawSeparator(RightColumnStartX-1);
 	Content.display();
 }
 
@@ -147,7 +157,9 @@ void PlaylistEditor::update()
 		Playlists.refresh();
 	}
 	
-	if (!Playlists.empty() && (Content.reallyEmpty() || m_content_update_requested))
+	if (!Playlists.empty()
+	&& ((Content.reallyEmpty() && Global::Timer - m_timer > fetch_delay) || m_content_update_requested)
+	)
 	{
 		m_content_update_requested = false;
 		Content.clearSearchResults();
@@ -197,11 +209,19 @@ void PlaylistEditor::update()
 	}
 }
 
+int PlaylistEditor::windowTimeout()
+{
+	if (Content.reallyEmpty())
+		return pe_timeout;
+	else
+		return Screen<WindowType>::windowTimeout();
+}
+
 bool PlaylistEditor::isContentFiltered()
 {
 	if (Content.isFiltered())
 	{
-		Statusbar::msg("Function currently unavailable due to filtered playlist content");
+		Statusbar::print("Function currently unavailable due to filtered playlist content");
 		return true;
 	}
 	return false;
@@ -224,8 +244,8 @@ void PlaylistEditor::AddToPlaylist(bool add_n_play)
 		withUnfilteredMenu(Content, [&]() {
 			success = addSongsToPlaylist(Content.beginV(), Content.endV(), add_n_play, -1);
 		});
-		Statusbar::msg("Playlist \"%s\" loaded%s",
-			Playlists.current().value().c_str(), withErrors(success)
+		Statusbar::printf("Playlist \"%1%\" loaded%2%",
+			Playlists.current().value(), withErrors(success)
 		);
 	}
 	else if (isActiveWindow(Content) && !Content.empty())
@@ -530,6 +550,11 @@ void PlaylistEditor::nextColumn()
 
 /***********************************************************************/
 
+void PlaylistEditor::updateTimer()
+{
+	m_timer = Global::Timer;
+}
+
 void PlaylistEditor::Locate(const std::string &name)
 {
 	update();
@@ -550,10 +575,15 @@ namespace {//
 std::string SongToString(const MPD::Song &s)
 {
 	std::string result;
-	if (Config.columns_in_playlist_editor)
-		result = s.toString(Config.song_in_columns_to_string_format, Config.tags_separator);
-	else
-		result = s.toString(Config.song_list_format_dollar_free, Config.tags_separator);
+	switch (Config.playlist_display_mode)
+	{
+		case DisplayMode::Classic:
+			result = s.toString(Config.song_list_format_dollar_free, Config.tags_separator);
+			break;
+		case DisplayMode::Columns:
+			result = s.toString(Config.song_in_columns_to_string_format, Config.tags_separator);
+			break;
+	}
 	return result;
 }
 

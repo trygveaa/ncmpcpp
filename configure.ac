@@ -1,7 +1,7 @@
 AC_INIT(configure.ac)
 
 AC_CONFIG_HEADERS(config.h)
-AM_INIT_AUTOMAKE(ncmpcpp, 0.6_pre)
+AM_INIT_AUTOMAKE(ncmpcpp, 0.6_beta2)
 
 AC_PREREQ(2.59)
 
@@ -122,6 +122,12 @@ AC_CHECK_LIB(boost_system$BOOST_LIB_SUFFIX, main, LDFLAGS="$LDFLAGS -lboost_syst
 	AC_MSG_ERROR([no boost.system library found])
 )
 
+dnl =============================
+dnl = checking for boost.format =
+dnl =============================
+AC_CHECK_HEADERS([boost/format.hpp], ,
+	AC_MSG_ERROR(boost/format.hpp is missing)
+)
 
 dnl =============================
 dnl = checking for boost.locale =
@@ -131,6 +137,23 @@ AC_CHECK_HEADERS([boost/locale.hpp], ,
 )
 AC_CHECK_LIB(boost_locale$BOOST_LIB_SUFFIX, main, LDFLAGS="$LDFLAGS -lboost_locale$BOOST_LIB_SUFFIX",
 	AC_MSG_ERROR([no boost.locale library found])
+)
+
+dnl =================================
+dnl = checking for boost.posix_time =
+dnl =================================
+AC_CHECK_HEADERS([boost/date_time/posix_time/posix_time.hpp], ,
+	AC_MSG_ERROR(boost/date_time/posix_time/posix_time.hpp is missing)
+)
+
+dnl ======================================
+dnl = checking for boost.program_options =
+dnl ======================================
+AC_CHECK_HEADERS([boost/program_options.hpp], ,
+	AC_MSG_ERROR(boost/program_options.hpp is missing)
+)
+AC_CHECK_LIB(boost_program_options$BOOST_LIB_SUFFIX, main, LDFLAGS="$LDFLAGS -lboost_program_options$BOOST_LIB_SUFFIX",
+	AC_MSG_ERROR([no boost.program_options library found])
 )
 
 dnl ============================
@@ -162,7 +185,7 @@ AC_CHECK_LIB(regex, regcomp, LDFLAGS="$LDFLAGS -lregex", )
 dnl ================================
 dnl = checking for various headers =
 dnl ================================
-AC_CHECK_HEADERS([dirent.h regex.h], , AC_MSG_ERROR(vital headers missing))
+AC_CHECK_HEADERS([netinet/tcp.h netinet/in.h], , AC_MSG_ERROR(vital headers missing))
 AC_CHECK_HEADERS([langinfo.h], , AC_MSG_WARN(locale detection disabled))
 
 dnl ==============================

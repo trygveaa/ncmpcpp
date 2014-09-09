@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -21,6 +21,7 @@
 #ifndef NCMPCPP_ACTIONS_H
 #define NCMPCPP_ACTIONS_H
 
+#include <boost/format.hpp>
 #include <map>
 #include <string>
 #include "window.h"
@@ -51,9 +52,9 @@ enum class Type
 	ToggleSpaceMode, ToggleAddMode, ToggleMouse, ToggleBitrateVisibility,
 	AddRandomItems, ToggleBrowserSortMode, ToggleLibraryTagType,
 	ToggleMediaLibrarySortMode, RefetchLyrics,
-	SetSelectedItemsPriority, FilterPlaylistOnPriorities, ShowSongInfo,
-	ShowArtistInfo, ShowLyrics, Quit, NextScreen, PreviousScreen, ShowHelp,
-	ShowPlaylist, ShowBrowser, ChangeBrowseMode, ShowSearchEngine,
+	SetSelectedItemsPriority, SetVisualizerSampleMultiplier, FilterPlaylistOnPriorities,
+	ShowSongInfo, ShowArtistInfo, ShowLyrics, Quit, NextScreen, PreviousScreen,
+	ShowHelp, ShowPlaylist, ShowBrowser, ChangeBrowseMode, ShowSearchEngine,
 	ResetSearchEngine, ShowMediaLibrary, ToggleMediaLibraryColumnsMode,
 	ShowPlaylistEditor, ShowTagEditor, ShowOutputs, ShowVisualizer,
 	ShowClock, ShowServerInfo,
@@ -66,7 +67,12 @@ void setResizeFlags();
 void resizeScreen(bool reload_main_window);
 void setWindowsDimensions();
 
-bool askYesNoQuestion(const std::string &question, void (*callback)());
+bool askYesNoQuestion(const boost::format &question, void (*callback)());
+inline bool askYesNoQuestion(const std::string &question, void (*callback)())
+{
+	return askYesNoQuestion(boost::format(question), callback);
+}
+
 bool isMPDMusicDirSet();
 
 extern bool OriginalStatusbarVisibility;
@@ -948,6 +954,16 @@ struct SetSelectedItemsPriority : public BaseAction
 	SetSelectedItemsPriority()
 	: BaseAction(Type::SetSelectedItemsPriority, "set_selected_items_priority") { }
 	
+protected:
+	virtual bool canBeRun() const;
+	virtual void run();
+};
+
+struct SetVisualizerSampleMultiplier : public BaseAction
+{
+	SetVisualizerSampleMultiplier()
+	: BaseAction(Type::SetVisualizerSampleMultiplier, "set_visualizer_sample_multiplier") { }
+
 protected:
 	virtual bool canBeRun() const;
 	virtual void run();

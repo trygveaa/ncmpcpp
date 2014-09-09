@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -394,8 +394,6 @@ std::string Connection::GetReplayGainMode()
 	if (mpd_pair *pair = mpd_recv_pair_named(m_connection, "replay_gain_mode"))
 	{
 		result = pair->value;
-		if (!result.empty())
-			result[0] = toupper(result[0]);
 		mpd_return_pair(m_connection, pair);
 	}
 	mpd_response_finish(m_connection);
@@ -718,8 +716,11 @@ void Connection::GetDirectoryRecursive(const std::string &directory, SongConsume
 {
 	prechecksNoCommandsList();
 	mpd_send_list_all_meta(m_connection, directory.c_str());
-	while (mpd_song *s = mpd_recv_song(m_connection))
-		f(Song(s));
+	while (mpd_entity *e = mpd_recv_entity(m_connection)) {
+		if (mpd_entity_get_type(e) == MPD_ENTITY_TYPE_SONG)
+			f(Song(mpd_song_dup(mpd_entity_get_song(e))));
+		mpd_entity_free(e);
+	}
 	mpd_response_finish(m_connection);
 	checkErrors();
 }

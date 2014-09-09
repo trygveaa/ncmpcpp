@@ -18,66 +18,34 @@
  *   51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.              *
  ***************************************************************************/
 
-#ifndef NCMPCPP_MACRO_UTILITIES_H
-#define NCMPCPP_MACRO_UTILITIES_H
+#ifndef NCMPCPP_EXEC_ITEM_H
+#define NCMPCPP_EXEC_ITEM_H
 
-#include <cassert>
-#include "actions.h"
-#include "screen_type.h"
+#include <functional>
 
-namespace Actions {//
-
-struct PushCharacters : public BaseAction
+template <typename ItemT, typename FunctionT>
+struct RunnableItem
 {
-	PushCharacters(NC::Window **w, std::vector<int> &&queue)
-	: BaseAction(Type::MacroUtility, ""), m_window(w), m_queue(queue) { }
+	typedef ItemT Item;
+	typedef std::function<FunctionT> Function;
 	
-protected:
-	virtual void run();
+	RunnableItem() { }
+	template <typename Arg1, typename Arg2>
+	RunnableItem(Arg1 &&opt, Arg2 &&f)
+	: m_item(std::forward<Arg1>(opt)), m_f(std::forward<Arg2>(f)) { }
+	
+	template <typename... Args>
+	typename Function::result_type run(Args&&... args) const
+	{
+		return m_f(std::forward<Args>(args)...);
+	}
+	
+	Item &item() { return m_item; }
+	const Item &item() const { return m_item; }
 	
 private:
-	NC::Window **m_window;
-	std::vector<int> m_queue;
+	Item m_item;
+	Function m_f;
 };
 
-struct RequireRunnable : public BaseAction
-{
-	RequireRunnable(BaseAction *action)
-	: BaseAction(Type::MacroUtility, ""), m_action(action) { assert(action); }
-	
-protected:
-	virtual bool canBeRun() const;
-	virtual void run() { }
-	
-private:
-	BaseAction *m_action;
-};
-
-struct RequireScreen : public BaseAction
-{
-	RequireScreen(ScreenType screen_type)
-	: BaseAction(Type::MacroUtility, ""), m_screen_type(screen_type) { }
-	
-protected:
-	virtual bool canBeRun() const;
-	virtual void run() { }
-	
-private:
-	ScreenType m_screen_type;
-};
-
-struct RunExternalCommand : public BaseAction
-{
-	RunExternalCommand(std::string command)
-	: BaseAction(Type::MacroUtility, ""), m_command(command) { }
-	
-protected:
-	virtual void run();
-	
-private:
-	std::string m_command;
-};
-
-}
-
-#endif // NCMPCPP_MACRO_UTILITIES_H
+#endif // NCMPCPP_EXEC_ITEM_H

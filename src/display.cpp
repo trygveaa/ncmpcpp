@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -97,8 +97,8 @@ void setProperties(NC::Menu<T> &menu, const MPD::Song &s, const ProxySongList &p
 	discard_colors = Config.discard_colors_if_item_is_selected && is_selected;
 	
 	int song_pos = menu.isFiltered() ? s.getPosition() : drawn_pos;
-	is_now_playing = Status::State::player() != MPD::psStop && myPlaylist->isActiveWindow(menu)
-	              && song_pos == myPlaylist->currentSongPosition();
+	is_now_playing = Status::get().playerState() != MPD::psStop && myPlaylist->isActiveWindow(menu)
+	              && song_pos == Status::get().currentSongPosition();
 	if (is_now_playing)
 		menu << Config.now_playing_prefix;
 }
@@ -371,12 +371,12 @@ void Display::Tags(NC::Menu<MPD::MutableSong> &menu)
 	}
 	else if (i == 12)
 	{
-		if (s.getNewURI().empty())
+		if (s.getNewName().empty())
 			menu << Charset::utf8ToLocale(s.getName());
 		else
 			menu << Charset::utf8ToLocale(s.getName())
 			     << Config.color2 << " -> " << NC::Color::End
-			     << Charset::utf8ToLocale(s.getNewURI());
+			     << Charset::utf8ToLocale(s.getNewName());
 	}
 }
 #endif // HAVE_TAGLIB_H
@@ -392,10 +392,15 @@ void Display::Items(NC::Menu<MPD::Item> &menu, const ProxySongList &pl)
 			     << "]";
 			break;
 		case MPD::itSong:
-			if (!Config.columns_in_browser)
-				showSongs(menu, *item.song, pl, Config.song_list_format);
-			else
-				showSongsInColumns(menu, *item.song, pl);
+			switch (Config.browser_display_mode)
+			{
+				case DisplayMode::Classic:
+					showSongs(menu, *item.song, pl, Config.song_list_format);
+					break;
+				case DisplayMode::Columns:
+					showSongsInColumns(menu, *item.song, pl);
+					break;
+			}
 			break;
 		case MPD::itPlaylist:
 			menu << Config.browser_playlist_prefix
@@ -409,10 +414,15 @@ void Display::SEItems(NC::Menu<SEItem> &menu, const ProxySongList &pl)
 	const SEItem &si = menu.drawn()->value();
 	if (si.isSong())
 	{
-		if (!Config.columns_in_search_engine)
-			showSongs(menu, si.song(), pl, Config.song_list_format);
-		else
-			showSongsInColumns(menu, si.song(), pl);
+		switch (Config.search_engine_display_mode)
+		{
+			case DisplayMode::Classic:
+				showSongs(menu, si.song(), pl, Config.song_list_format);
+				break;
+			case DisplayMode::Columns:
+				showSongsInColumns(menu, si.song(), pl);
+				break;
+		}
 	}
 	else
 		menu << si.buffer();

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -26,8 +26,8 @@
 #include <boost/locale/conversion.hpp>
 #include <algorithm>
 #include <fstream>
-#include <sstream>
 
+#include "actions.h"
 #include "browser.h"
 #include "charset.h"
 #include "display.h"
@@ -212,9 +212,9 @@ void TagEditor::switchTo()
 void TagEditor::refresh()
 {
 	Dirs->display();
-	mvvline(MainStartY, MiddleColumnStartX-1, 0, MainHeight);
+	drawSeparator(MiddleColumnStartX-1);
 	TagTypes->display();
-	mvvline(MainStartY, RightColumnStartX-1, 0, MainHeight);
+	drawSeparator(RightColumnStartX-1);
 	Tags->display();
 	
 	if (w == FParserDialog)
@@ -289,7 +289,7 @@ void TagEditor::enterPressed()
 			Dirs->reset();
 		}
 		else
-			Statusbar::msg("No subdirectories found");
+			Statusbar::print("No subdirectories found");
 	}
 	else if (w == FParserDialog)
 	{
@@ -370,7 +370,7 @@ void TagEditor::enterPressed()
 		else if (pos == 1 || pos == 4) // preview or proceed
 		{
 			bool success = 1;
-			Statusbar::msg("Parsing...");
+			Statusbar::print("Parsing...");
 			FParserPreview->clear();
 			for (auto it = EditedSongs.begin(); it != EditedSongs.end(); ++it)
 			{
@@ -393,12 +393,12 @@ void TagEditor::enterPressed()
 					std::string new_file = GenerateFilename(s, "{" + Config.pattern + "}");
 					if (new_file.empty() && !FParserUsePreview)
 					{
-						Statusbar::msg("File \"%s\" would have an empty name", s.getName().c_str());
+						Statusbar::printf("File \"%1%\" would have an empty name", s.getName());
 						FParserUsePreview = 1;
 						success = 0;
 					}
 					if (!FParserUsePreview)
-						s.setNewURI(new_file + extension);
+						s.setNewName(new_file + extension);
 					*FParserPreview << file << Config.color2 << " -> " << NC::Color::End;
 					if (new_file.empty())
 						*FParserPreview << Config.empty_tags_color << Config.empty_tag << NC::Color::End;
@@ -422,7 +422,7 @@ void TagEditor::enterPressed()
 				quit = 1;
 			}
 			if (pos != 4 || success)
-				Statusbar::msg("Operation finished");
+				Statusbar::print("Operation finished");
 		}
 		else if (pos == 2) // show legend
 		{
@@ -480,10 +480,10 @@ void TagEditor::enterPressed()
 				else
 					(*it)->setTrack(boost::lexical_cast<std::string>(i));
 			}
-			Statusbar::msg("Tracks numbered");
+			Statusbar::print("Tracks numbered");
 		}
 		else
-			Statusbar::msg("Aborted");
+			Statusbar::print("Aborted");
 		return;
 	}
 	
@@ -523,7 +523,7 @@ void TagEditor::enterPressed()
 			else if (w == Tags)
 			{
 				MPD::MutableSong &s = Tags->current().value();
-				std::string old_name = s.getNewURI().empty() ? s.getName() : s.getNewURI();
+				std::string old_name = s.getNewName().empty() ? s.getName() : s.getNewName();
 				size_t last_dot = old_name.rfind(".");
 				std::string extension = old_name.substr(last_dot);
 				old_name = old_name.substr(0, last_dot);
@@ -531,49 +531,49 @@ void TagEditor::enterPressed()
 				Statusbar::put() << NC::Format::Bold << "New filename: " << NC::Format::NoBold;
 				std::string new_name = wFooter->getString(old_name);
 				Statusbar::unlock();
-				if (!new_name.empty() && new_name != old_name)
-					s.setNewURI(new_name + extension);
+				if (!new_name.empty())
+					s.setNewName(new_name + extension);
 				Tags->scroll(NC::Scroll::Down);
 			}
 		}
 		else if (id == TagTypes->size()-5) // capitalize first letters
 		{
-			Statusbar::msg("Processing...");
+			Statusbar::print("Processing...");
 			for (auto it = EditedSongs.begin(); it != EditedSongs.end(); ++it)
 				CapitalizeFirstLetters(**it);
-			Statusbar::msg("Done");
+			Statusbar::print("Done");
 		}
 		else if (id == TagTypes->size()-4) // lower all letters
 		{
-			Statusbar::msg("Processing...");
+			Statusbar::print("Processing...");
 			for (auto it = EditedSongs.begin(); it != EditedSongs.end(); ++it)
 				LowerAllLetters(**it);
-			Statusbar::msg("Done");
+			Statusbar::print("Done");
 		}
 		else if (id == TagTypes->size()-2) // reset
 		{
 			for (auto it = Tags->beginV(); it != Tags->endV(); ++it)
 				it->clearModifications();
-			Statusbar::msg("Changes reset");
+			Statusbar::print("Changes reset");
 		}
 		else if (id == TagTypes->size()-1) // save
 		{
 			bool success = 1;
-			Statusbar::msg("Writing changes...");
+			Statusbar::print("Writing changes...");
 			for (auto it = EditedSongs.begin(); it != EditedSongs.end(); ++it)
 			{
-				Statusbar::msg("Writing tags in \"%s\"...", (*it)->getName().c_str());
+				Statusbar::printf("Writing tags in \"%1%\"...", (*it)->getName());
 				if (!Tags::write(**it))
 				{
-					const char msg[] = "Error while writing tags in \"%ls\"";
-					Statusbar::msg(msg, wideShorten(ToWString((*it)->getURI()), COLS-const_strlen(msg)).c_str());
+					const char msg[] = "Error while writing tags in \"%1%\"";
+					Statusbar::printf(msg, wideShorten((*it)->getURI(), COLS-const_strlen(msg)).c_str());
 					success = 0;
 					break;
 				}
 			}
 			if (success)
 			{
-				Statusbar::msg("Tags updated");
+				Statusbar::print("Tags updated");
 				TagTypes->setHighlightColor(Config.main_highlight_color);
 				TagTypes->reset();
 				w->refresh();
@@ -1025,7 +1025,7 @@ void TagEditor::LocateSong(const MPD::Song &s)
 	// highlight our file
 	for (size_t i = 0; i < Tags->size(); ++i)
 	{
-		if ((*Tags)[i].value().getHash() == s.getHash())
+		if ((*Tags)[i].value() == s)
 		{
 			Tags->highlight(i);
 			break;
@@ -1203,7 +1203,7 @@ std::string SongToString(const MPD::MutableSong &s)
 	if (i < 11)
 		result = (s.*SongInfo::Tags[i].Get)(0);
 	else if (i == 12)
-		result = s.getNewURI().empty() ? s.getName() : s.getName() + " -> " + s.getNewURI();
+		result = s.getNewName().empty() ? s.getName() : s.getName() + " -> " + s.getNewName();
 	return result.empty() ? Config.empty_tag : result;
 }
 

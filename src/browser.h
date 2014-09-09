@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -74,7 +74,7 @@ struct Browser: Screen<NC::Menu<MPD::Item>>, Filterable, HasSongs, Searchable, T
 	void GetLocalDirectory(MPD::ItemList &, const std::string &, bool) const;
 	void ClearDirectory(const std::string &) const;
 	void ChangeBrowseMode();
-	bool deleteItem(const MPD::Item &);
+	bool deleteItem(const MPD::Item &, std::string &errmsg);
 #	endif // !WIN32
 	
 	static bool isParentDirectory(const MPD::Item &item) {

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -19,6 +19,7 @@
  ***************************************************************************/
 
 #include <boost/bind.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/locale/conversion.hpp>
 #include <algorithm>
 #include <array>
@@ -45,7 +46,10 @@ using Global::myScreen;
 
 MediaLibrary *myLibrary;
 
-namespace {//
+namespace {
+
+const auto ml_wtimeout = 250;
+const auto fetch_delay = boost::posix_time::milliseconds(ml_wtimeout);
 
 bool hasTwoColumns;
 size_t itsLeftColStartX;
@@ -144,6 +148,7 @@ public:
 }
 
 MediaLibrary::MediaLibrary()
+: m_timer(boost::posix_time::from_time_t(0))
 {
 	hasTwoColumns = 0;
 	itsLeftColWidth = COLS/3-1;
@@ -222,9 +227,9 @@ void MediaLibrary::resize()
 void MediaLibrary::refresh()
 {
 	Tags.display();
-	mvvline(MainStartY, itsMiddleColStartX-1, 0, MainHeight);
+	drawSeparator(itsMiddleColStartX-1);
 	Albums.display();
-	mvvline(MainStartY, itsRightColStartX-1, 0, MainHeight);
+	drawSeparator(itsRightColStartX-1);
 	Songs.display();
 	if (Albums.empty())
 	{
@@ -336,7 +341,9 @@ void MediaLibrary::update()
 			Tags.refresh();
 		}
 		
-		if ((!Tags.empty() && Albums.reallyEmpty()) || m_albums_update_request)
+		if (!Tags.empty()
+		&& ((Albums.reallyEmpty() && Global::Timer - m_timer > fetch_delay) || m_albums_update_request)
+		)
 		{
 			Albums.clearSearchResults();
 			m_albums_update_request = false;
@@ -382,7 +389,9 @@ void MediaLibrary::update()
 		}
 	}
 	
-	if ((!Albums.empty() && Songs.reallyEmpty()) || m_songs_update_request)
+	if (!Albums.empty()
+	&& ((Songs.reallyEmpty() && Global::Timer - m_timer > fetch_delay) || m_songs_update_request)
+	)
 	{
 		Songs.clearSearchResults();
 		m_songs_update_request = false;
@@ -413,6 +422,14 @@ void MediaLibrary::update()
 		});
 		Songs.refresh();
 	}
+}
+
+int MediaLibrary::windowTimeout()
+{
+	if (Albums.reallyEmpty() || Songs.reallyEmpty())
+		return ml_wtimeout;
+	else
+		return Screen<WindowType>::windowTimeout();
 }
 
 void MediaLibrary::enterPressed()
@@ -851,6 +868,11 @@ void MediaLibrary::nextColumn()
 
 /***********************************************************************/
 
+void MediaLibrary::updateTimer()
+{
+	m_timer = Global::Timer;
+}
+
 void MediaLibrary::toggleColumnsMode()
 {
 	hasTwoColumns = !hasTwoColumns;
@@ -893,24 +915,36 @@ ProxySongList MediaLibrary::songsProxyList()
 void MediaLibrary::toggleSortMode()
 {
 	Config.media_library_sort_by_mtime = !Config.media_library_sort_by_mtime;
-	Statusbar::msg("Sorting library by: %s",
-		Config.media_library_sort_by_mtime ? "Modification time" : "Name");
+	Statusbar::printf("Sorting library by: %1%",
+		Config.media_library_sort_by_mtime ? "modification time" : "name");
 	if (hasTwoColumns)
 	{
-		std::sort(Albums.beginV(), Albums.endV(), SortAlbumEntries());
+		withUnfilteredMenuReapplyFilter(Albums, [this]() {
+			std::sort(Albums.beginV(), Albums.endV(), SortAlbumEntries());
+		});
 		Albums.refresh();
 		Songs.clear();
 		if (Config.titles_visibility)
 		{
 			std::string item_type = boost::locale::to_lower(
 				tagTypeToString(Config.media_lib_primary_tag));
-			std::string and_mtime = Config.media_library_sort_by_mtime ? " and mtime" : "";
+			std::string and_mtime = Config.media_library_sort_by_mtime ? (" " "and mtime") : "";
 			Albums.setTitle("Albums (sorted by " + item_type + and_mtime + ")");
 		}
 	}
 	else
 	{
-		Tags.clear();
+		withUnfilteredMenuReapplyFilter(Tags, [this]() {
+			// if we already have modification times,
+			// just resort. otherwise refetch the list.
+			if (!Tags.empty() && Tags[0].value().mtime() > 0)
+			{
+				std::sort(Tags.beginV(), Tags.endV(), SortPrimaryTags());
+				Tags.refresh();
+			}
+			else
+				Tags.clear();
+		});
 		Albums.clear();
 		Songs.clear();
 	}
@@ -924,7 +958,12 @@ void MediaLibrary::LocateSong(const MPD::Song &s)
 	{
 		std::string item_type = boost::locale::to_lower(
 			tagTypeToString(Config.media_lib_primary_tag));
-		Statusbar::msg("Can't use this function because the song has no %s tag set", item_type.c_str());
+		Statusbar::printf("Can't use this function because the song has no %s tag", item_type);
+		return;
+	}
+	if (!s.isFromDatabase())
+	{
+		Statusbar::print("Song is not from the database");
 		return;
 	}
 	
@@ -976,11 +1015,11 @@ void MediaLibrary::LocateSong(const MPD::Song &s)
 	if (Songs.empty())
 		return;
 
-	if (s.getHash() != Songs.current().value().getHash())
+	if (s != Songs.current().value())
 	{
 		for (size_t i = 0; i < Songs.size(); ++i)
 		{
-			if (s.getHash()  == Songs[i].value().getHash())
+			if (s == Songs[i].value())
 			{
 				Songs.highlight(i);
 				break;
@@ -1011,8 +1050,8 @@ void MediaLibrary::AddToPlaylist(bool add_n_play)
 			bool success = addSongsToPlaylist(list.begin(), list.end(), add_n_play, -1);
 			std::string tag_type = boost::locale::to_lower(
 				tagTypeToString(Config.media_lib_primary_tag));
-			Statusbar::msg("Songs with %s = \"%s\" added%s",
-				tag_type.c_str(), Tags.current().value().tag().c_str(), withErrors(success)
+			Statusbar::printf("Songs with %1% \"%2%\" added%3%",
+				tag_type, Tags.current().value().tag(), withErrors(success)
 			);
 		}
 		else if (isActiveWindow(Albums))
@@ -1021,8 +1060,8 @@ void MediaLibrary::AddToPlaylist(bool add_n_play)
 			withUnfilteredMenu(Songs, [&]() {
 				success = addSongsToPlaylist(Songs.beginV(), Songs.endV(), add_n_play, -1);
 			});
-			Statusbar::msg("Songs from album \"%s\" added%s",
-				Albums.current().value().entry().album().c_str(), withErrors(success)
+			Statusbar::printf("Songs from album \"%1%\" added%2%",
+				Albums.current().value().entry().album(), withErrors(success)
 			);
 		}
 	}

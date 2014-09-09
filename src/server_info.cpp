@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -18,7 +18,7 @@
  *   51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.              *
  ***************************************************************************/
 
-#include <sys/time.h>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <iomanip>
 
 #include "global.h"
@@ -33,6 +33,7 @@ using Global::MainStartY;
 ServerInfo *myServerInfo;
 
 ServerInfo::ServerInfo()
+: m_timer(boost::posix_time::from_time_t(0))
 {
 	SetDimensions();
 	w = NC::Scrollpad((COLS-itsWidth)/2, (MainHeight-itsHeight)/2+MainStartY, itsWidth, itsHeight, "MPD server info", Config.main_color, Config.window_border);
@@ -75,10 +76,9 @@ std::wstring ServerInfo::title()
 
 void ServerInfo::update()
 {
-	static timeval past = { 0, 0 };
-	if (Global::Timer.tv_sec <= past.tv_sec)
+	if (Global::Timer - m_timer < boost::posix_time::seconds(1))
 		return;
-	past = Global::Timer;
+	m_timer = Global::Timer;
 	
 	MPD::Statistics stats = Mpd.getStatistics();
 	if (stats.empty())

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -25,6 +25,7 @@
 
 #ifdef ENABLE_VISUALIZER
 
+#include <boost/date_time/posix_time/posix_time_types.hpp>
 #include "interfaces.h"
 #include "screen.h"
 #include "window.h"
@@ -45,6 +46,8 @@ struct Visualizer: Screen<NC::Window>, Tabbable
 	
 	virtual void update() OVERRIDE;
 	virtual void scroll(NC::Scroll) OVERRIDE { }
+
+	virtual int windowTimeout() OVERRIDE;
 	
 	virtual void enterPressed() OVERRIDE { }
 	virtual void spacePressed() OVERRIDE;
@@ -57,8 +60,6 @@ struct Visualizer: Screen<NC::Window>, Tabbable
 	void ResetFD();
 	void FindOutputID();
 	
-	static const int WindowTimeout;
-	
 protected:
 	virtual bool isLockable() OVERRIDE { return true; }
 	
@@ -69,13 +70,13 @@ private:
 #	endif // HAVE_FFTW3_H
 	
 	int m_output_id;
-	timeval m_timer;
+	boost::posix_time::ptime m_timer;
 	
 	int m_fifo;
 	unsigned m_samples;
 #	ifdef HAVE_FFTW3_H
 	unsigned m_fftw_results;
-	unsigned *m_freq_magnitudes;
+	double *m_freq_magnitudes;
 	double *m_fftw_input;
 	fftw_complex *m_fftw_output;
 	fftw_plan m_fftw_plan;

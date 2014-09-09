@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -20,6 +20,8 @@
 
 #ifndef NCMPCPP_SERVER_INFO_H
 #define NCMPCPP_SERVER_INFO_H
+
+#include <boost/date_time/posix_time/posix_time_types.hpp>
 
 #include "interfaces.h"
 #include "screen.h"
@@ -48,6 +50,8 @@ protected:
 private:
 	void SetDimensions();
 	
+	boost::posix_time::ptime m_timer;
+
 	MPD::StringList itsURLHandlers;
 	MPD::StringList itsTagTypes;
 	

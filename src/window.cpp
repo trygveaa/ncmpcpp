@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -21,6 +21,7 @@
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
+#include <iostream>
 #include <readline/history.h>
 #include <readline/readline.h>
 
@@ -49,12 +50,18 @@ const char *base;
 int read_key(FILE *)
 {
 	size_t x;
+	bool done;
 	int result;
 	do
 	{
 		x = w->getX();
-		if (w->runGetStringHelper(rl_line_buffer))
+		if (w->runGetStringHelper(rl_line_buffer, &done))
 		{
+			if (done)
+			{
+				rl_done = 1;
+				return 0;
+			}
 			w->goToXY(x, start_y);
 			w->refresh();
 		}
@@ -152,6 +159,196 @@ int add_base()
 
 namespace NC {//
 
+std::ostream &operator<<(std::ostream &os, Color c)
+{
+	switch (c)
+	{
+		case Color::Default:
+			os << "default";
+			break;
+		case Color::Black:
+			os << "black";
+			break;
+		case Color::Red:
+			os << "red";
+			break;
+		case Color::Green:
+			os << "green";
+			break;
+		case Color::Yellow:
+			os << "yellow";
+			break;
+		case Color::Blue:
+			os << "blue";
+			break;
+		case Color::Magenta:
+			os << "magenta";
+			break;
+		case Color::Cyan:
+			os << "cyan";
+			break;
+		case Color::White:
+			os << "white";
+			break;
+		case Color::End:
+			os << "color_end";
+			break;
+	}
+	return os;
+}
+
+std::istream &operator>>(std::istream &is, Color &c)
+{
+	std::string sc;
+	is >> sc;
+	if (sc == "default")
+		c = Color::Default;
+	else if (sc == "black")
+		c = Color::Black;
+	else if (sc == "red")
+		c = Color::Red;
+	else if (sc == "green")
+		c = Color::Green;
+	else if (sc == "yellow")
+		c = Color::Yellow;
+	else if (sc == "blue")
+		c = Color::Blue;
+	else if (sc == "magenta")
+		c = Color::Magenta;
+	else if (sc == "cyan")
+		c = Color::Cyan;
+	else if (sc == "white")
+		c = Color::White;
+	else if (sc == "color_end")
+		c = Color::End;
+	else
+		is.setstate(std::ios::failbit);
+	return is;
+}
+
+std::ostream &operator<<(std::ostream &os, Format f)
+{
+	switch (f)
+	{
+		case Format::None:
+			os << "none";
+			break;
+		case Format::Bold:
+			os << "bold";
+			break;
+		case Format::NoBold:
+			os << "bold";
+			break;
+		case Format::Underline:
+			os << "underline";
+			break;
+		case Format::NoUnderline:
+			os << "no_underline";
+			break;
+		case Format::Reverse:
+			os << "reverse";
+			break;
+		case Format::NoReverse:
+			os << "no_reverse";
+			break;
+		case Format::AltCharset:
+			os << "alt_charset";
+			break;
+		case Format::NoAltCharset:
+			os << "no_alt_charset";
+			break;
+	}
+	return os;
+}
+
+std::ostream &operator<<(std::ostream &os, Border b)
+{
+	switch (b)
+	{
+		case Border::None:
+			os << "none";
+			break;
+		case Border::Black:
+			os << "black";
+			break;
+		case Border::Red:
+			os << "red";
+			break;
+		case Border::Green:
+			os << "green";
+			break;
+		case Border::Yellow:
+			os << "yellow";
+			break;
+		case Border::Blue:
+			os << "blue";
+			break;
+		case Border::Magenta:
+			os << "magenta";
+			break;
+		case Border::Cyan:
+			os << "cyan";
+			break;
+		case Border::White:
+			os << "white";
+			break;
+	}
+	return os;
+}
+
+std::istream &operator>>(std::istream &is, Border &b)
+{
+	std::string sb;
+	is >> sb;
+	if (sb == "none")
+		b = Border::None;
+	else if (sb == "black")
+		b = Border::Black;
+	else if (sb == "red")
+		b = Border::Red;
+	else if (sb == "green")
+		b = Border::Green;
+	else if (sb == "yellow")
+		b = Border::Yellow;
+	else if (sb == "blue")
+		b = Border::Blue;
+	else if (sb == "magenta")
+		b = Border::Magenta;
+	else if (sb == "cyan")
+		b = Border::Cyan;
+	else if (sb == "white")
+		b = Border::White;
+	else
+		is.setstate(std::ios::failbit);
+	return is;
+}
+
+std::ostream &operator<<(std::ostream &os, Scroll s)
+{
+	switch (s)
+	{
+		case Scroll::Up:
+			os << "scroll_up";
+			break;
+		case Scroll::Down:
+			os << "scroll_down";
+			break;
+		case Scroll::PageUp:
+			os << "scroll_page_up";
+			break;
+		case Scroll::PageDown:
+			os << "scroll_page_down";
+			break;
+		case Scroll::Home:
+			os << "scroll_home";
+			break;
+		case Scroll::End:
+			os << "scroll_end";
+			break;
+	}
+	return os;
+}
+
 void initScreen(GNUC_UNUSED const char *window_title, bool enable_colors)
 {
 	const int ColorsTable[] =
@@ -178,13 +375,17 @@ void initScreen(GNUC_UNUSED const char *window_title, bool enable_colors)
 			for (int j = 0; j < 8; ++j)
 				init_pair(num++, ColorsTable[j], i < 0 ? i : ColorsTable[i]);
 	}
+	raw();
+	nonl();
 	noecho();
-	cbreak();
 	curs_set(0);
 
 	rl_initialize();
 	// disable autocompletion
 	rl_bind_key('\t', nullptr);
+	rl_bind_key(KEY_ESCAPE, nullptr);
+	// do not catch signals
+	rl_catch_signals = 0;
 	// overwrite readline callbacks
 	rl_getc_function = rl::read_key;
 	rl_redisplay_function = rl::display_string;
@@ -510,8 +711,11 @@ void Window::altCharset(bool altcharset_state) const
 
 void Window::setTimeout(int timeout)
 {
-	m_window_timeout = timeout;
-	wtimeout(m_window, timeout);
+	if (timeout != m_window_timeout)
+	{
+		m_window_timeout = timeout;
+		wtimeout(m_window, timeout);
+	}
 }
 
 void Window::addFDCallback(int fd, void (*callback)())
@@ -656,11 +860,13 @@ bool Window::hasCoords(int &x, int &y)
 #	endif
 }
 
-bool Window::runGetStringHelper(const char *arg) const
+bool Window::runGetStringHelper(const char *arg, bool *done) const
 {
 	if (m_get_string_helper)
 	{
-		m_get_string_helper(arg);
+		bool continue_ = m_get_string_helper(arg);
+		if (done != nullptr)
+			*done = !continue_;
 		return true;
 	}
 	else

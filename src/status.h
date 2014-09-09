@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -29,26 +29,20 @@ namespace Status {//
 void handleClientError(MPD::ClientError &e);
 void handleServerError(MPD::ServerError &e);
 
-void trace();
+void trace(bool update_timer, bool update_window_timeout);
+inline void trace() { trace(true, false); }
 void update(int event);
+void clear();
 
-namespace State {//
+const MPD::Status &get();
 
-bool repeat();
-bool random();
-bool single();
-bool consume();
-bool crossfade();
-
-MPD::PlayerState player();
-int volume();
+// get current elapsed time (the one from
+// the status is outdated most of the time).
 unsigned elapsedTime();
-
-}
 
 namespace Changes {//
 
-void playlist();
+void playlist(unsigned previous_version);
 void storedPlaylists();
 void database();
 void playerState();

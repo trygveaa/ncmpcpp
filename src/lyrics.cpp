@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Andrzej Rybczak                            *
+ *   Copyright (C) 2008-2014 by Andrzej Rybczak                            *
  *   electricityispower@gmail.com                                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -106,7 +106,7 @@ void Lyrics::switchTo()
 		
 		if (isDownloadInProgress || itsWorkersNumber > 0)
 		{
-			Statusbar::msg("Lyrics are being downloaded...");
+			Statusbar::print("Lyrics are being downloaded...");
 			return;
 		}
 #		endif // HAVE_CURL_CURL_H
@@ -124,7 +124,7 @@ void Lyrics::switchTo()
 			drawHeader();
 		}
 		else
-			Statusbar::msg("Song must have both artist and title tag set");
+			Statusbar::print("Song must have both artist and title tag set");
 	}
 	else
 		switchToPreviousScreen();
@@ -133,14 +133,16 @@ void Lyrics::switchTo()
 std::wstring Lyrics::title()
 {
 	std::wstring result = L"Lyrics: ";
-	result += Scroller(ToWString(itsSong.toString("{%a - %t}", ", ")), itsScrollBegin, COLS-result.length()-(Config.new_design ? 2 : Global::VolumeState.length()));
+	result += Scroller(ToWString(itsSong.toString("{%a - %t}", ", ")), itsScrollBegin, COLS-result.length()-(Config.design == Design::Alternative ? 2 : Global::VolumeState.length()));
 	return result;
 }
 
 void Lyrics::spacePressed()
 {
 	Config.now_playing_lyrics = !Config.now_playing_lyrics;
-	Statusbar::msg("Reload lyrics if song changes: %s", Config.now_playing_lyrics ? "On" : "Off");
+	Statusbar::printf("Reload lyrics if song changes: %1%",
+		Config.now_playing_lyrics ? "on" : "off"
+	);
 }
 
 #ifdef HAVE_CURL_CURL_H
@@ -156,7 +158,9 @@ void Lyrics::DownloadInBackground(const MPD::Song &s)
 		f.close();
 		return;
 	}
-	Statusbar::msg("Fetching lyrics for \"%s\"...", s.toString(Config.song_status_format_no_colors, Config.tags_separator).c_str());
+	Statusbar::printf("Fetching lyrics for \"%1%\"...",
+		s.toString(Config.song_status_format_no_colors, Config.tags_separator)
+	);
 	
 	MPD::Song *s_copy = new MPD::Song(s);
 	pthread_mutex_lock(&itsDIBLock);
@@ -310,8 +314,6 @@ void Lyrics::Load()
 	
 	itsFilename = GenerateFilename(itsSong);
 	
-	CreateDir(Config.lyrics_directory);
-	
 	w.clear();
 	w.reset();
 	
@@ -349,11 +351,11 @@ void Lyrics::Edit()
 	
 	if (Config.external_editor.empty())
 	{
-		Statusbar::msg("Proper external_editor variable has to be set in configuration file");
+		Statusbar::print("Proper external_editor variable has to be set in configuration file");
 		return;
 	}
 	
-	Statusbar::msg("Opening lyrics in external editor...");
+	Statusbar::print("Opening lyrics in external editor...");
 	
 	GNUC_UNUSED int res;
 	if (Config.use_console_editor)
@@ -385,8 +387,8 @@ void Lyrics::Refetch()
 {
 	if (remove(itsFilename.c_str()) && errno != ENOENT)
 	{
-		const char msg[] = "Couldn't remove \"%ls\": %s";
-		Statusbar::msg(msg, wideShorten(ToWString(itsFilename), COLS-const_strlen(msg)-25).c_str(), strerror(errno));
+		const char msg[] = "Couldn't remove \"%1%\": %2%";
+		Statusbar::printf(msg, wideShorten(itsFilename, COLS-const_strlen(msg)-25), strerror(errno));
 		return;
 	}
 	Load();
@@ -399,9 +401,9 @@ void Lyrics::ToggleFetcher()
 	else
 		itsFetcher = &lyricsPlugins[0];
 	if (*itsFetcher)
-		Statusbar::msg("Using lyrics database: %s", (*itsFetcher)->name());
+		Statusbar::printf("Using lyrics database: %s", (*itsFetcher)->name());
 	else
-		Statusbar::msg("Using all lyrics databases");
+		Statusbar::print("Using all lyrics databases");
 }
 
 void Lyrics::Take()
